@@ -165,6 +165,9 @@ function NewMenu() {
     
     // Only run loading screen timer if it should show
     if (showLoadingScreen) {
+      // Prevent scrolling during loading screen
+      document.body.style.overflow = 'hidden'
+      
       // Mark that we've shown the loading screen in this session
       sessionStorage.setItem('loadingScreenShown', 'true')
       
@@ -175,10 +178,14 @@ function NewMenu() {
       // Remove loading screen after fade completes
       const removeTimer = setTimeout(() => {
         setShowLoadingScreen(false)
+        // Re-enable scrolling
+        document.body.style.overflow = 'unset'
       }, 4000)
       return () => {
         clearTimeout(fadeTimer)
         clearTimeout(removeTimer)
+        // Ensure scrolling is re-enabled on cleanup
+        document.body.style.overflow = 'unset'
       }
     }
   }, [])

@@ -10,47 +10,86 @@ function MacroCalculator() {
   const [inches, setInches] = useState('')
   const [activity, setActivity] = useState('1.2')
   const [goal, setGoal] = useState('maintain')
+  const [heightUnit, setHeightUnit] = useState('imperial') // imperial or metric
+  const [heightCm, setHeightCm] = useState('')
   const [result, setResult] = useState(null)
+  const [showForm, setShowForm] = useState(true)
 
   const handleSubmit = (e) => {
     e.preventDefault()
 
-    // Calculate BMR using Mifflin-St Jeor equation
-    const weightKg = parseFloat(weight) * 0.453592
-    const heightCm = (parseFloat(feet) * 12 + parseFloat(inches)) * 2.54
+    // Validate inputs
+    const weightLb = parseFloat(weight)
     const ageNum = parseFloat(age)
+    const feetNum = parseFloat(feet)
+    const inchesNum = parseFloat(inches)
 
-    let bmr
-    if (sex === 'm') {
-      bmr = 10 * weightKg + 6.25 * heightCm - 5 * ageNum + 5
+    if (ageNum < 10 || ageNum > 100) {
+      alert('Age must be between 10 and 100')
+      return
+    }
+    if (weightLb < 30 || weightLb > 600) {
+      alert('Weight must be between 30 and 600 lb')
+      return
+    }
+
+    // Calculate height in cm
+    let cm
+    if (heightUnit === 'metric') {
+      cm = parseFloat(heightCm)
+      if (!cm || cm < 100 || cm > 250) {
+        alert('Height must be between 100 and 250 cm')
+        return
+      }
     } else {
-      bmr = 10 * weightKg + 6.25 * heightCm - 5 * ageNum - 161
+      cm = (feetNum * 12 + inchesNum) * 2.54
+    }
+    
+    const weightKg = weightLb * 0.453592
+
+    // Calculate BMR using Mifflin-St Jeor equation
+    let BMR
+    if (sex === 'm') {
+      BMR = 10 * weightKg + 6.25 * cm - 5 * ageNum + 5
+    } else {
+      BMR = 10 * weightKg + 6.25 * cm - 5 * ageNum - 161
     }
 
-    // Apply activity multiplier
-    let calories = bmr * parseFloat(activity)
+    // Calculate TDEE (maintenance calories)
+    const TDEE = BMR * parseFloat(activity)
 
-    // Adjust for goal
-    if (goal === 'deficit') {
-      calories *= 0.85 // 15% deficit
-    } else if (goal === 'surplus') {
-      calories *= 1.1 // 10% surplus
+    // Adjust calories and protein based on goal
+    let calories, protein
+    if (goal === 'deficit' || goal === 'cut') {
+      calories = TDEE * 0.85  // 15% deficit
+      protein = weightLb * 1.15  // Higher protein for cutting
+    } else if (goal === 'bulk') {
+      calories = TDEE * 1.10  // 10% surplus
+      protein = weightLb * 1.05  // Moderate protein for bulking
+    } else {
+      calories = TDEE  // Maintenance
+      protein = weightLb * 0.85  // Standard protein
     }
 
-    // Calculate macros
-    const proteinGrams = parseFloat(weight) * 0.8 // 0.8g per lb
-    const fatGrams = (calories * 0.25) / 9 // 25% of calories from fat
-    const proteinCalories = proteinGrams * 4
-    const fatCalories = fatGrams * 9
-    const carbCalories = calories - proteinCalories - fatCalories
-    const carbGrams = carbCalories / 4
+    // Calculate fat (minimum 0.30g per lb, prefer 28% of calories)
+    const fatMin = weightLb * 0.30
+    const fatPref = (0.28 * calories) / 9
+    const fat = Math.max(fatMin, fatPref)
+
+    // Calculate carbs from remaining calories
+    const carbCalories = calories - protein * 4 - fat * 9
+    const carbs = carbCalories < 200 ? 50 : carbCalories / 4
 
     setResult({
+      maintenance: Math.round(TDEE),
       calories: Math.round(calories),
-      protein: Math.round(proteinGrams),
-      fat: Math.round(fatGrams),
-      carbs: Math.round(carbGrams),
+      protein: Math.round(protein),
+      fat: Math.round(fat),
+      carbs: Math.round(carbs),
     })
+    
+    // Hide form and show results
+    setShowForm(false)
   }
 
   return (
@@ -80,15 +119,100 @@ function MacroCalculator() {
           </button>
         </Link>
 
-        <div className="bg-white rounded-lg shadow-lg p-6 md:p-8">
-          <div className="mb-6">
-            <h2 className="text-2xl md:text-3xl font-bold text-primary-700 mb-2">Macro Calculator</h2>
-            <p className="text-gray-600">
-              Calculate your personalized daily macronutrient targets based on your goals
-            </p>
-          </div>
+        {/* Results Section - Shows at top when available */}
+        {result && !showForm && (
+          <div className="bg-white rounded-lg shadow-lg p-6 md:p-8 mb-6">
+            <div className="space-y-4">
+              {/* Maintenance Calories */}
+              <div className="p-4 bg-gray-100 rounded-lg border border-gray-300">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700">Maintenance Calories (TDEE)</span>
+                  <span className="text-xl font-bold text-gray-900">{result.maintenance} cal</span>
+                </div>
+              </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Target Macros */}
+              <div className="p-6 bg-gradient-to-br from-primary-50 to-primary-100 rounded-lg border-2 border-primary-700">
+                <h3 className="text-xl font-semibold mb-4 text-primary-700">Your Daily Macro Targets</h3>
+                
+                {/* Calories - Full Width */}
+                <div className="mb-4 text-center p-5 bg-white rounded-lg shadow-md">
+                  <p className="text-4xl font-bold text-primary-700">{result.calories}</p>
+                  <p className="text-sm text-gray-600 mt-1">Daily Calories</p>
+                </div>
+
+                {/* Macros Grid */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="text-center p-4 bg-white rounded-lg shadow-sm">
+                    <p className="text-2xl font-bold text-black">{result.protein}g</p>
+                    <p className="text-xs text-gray-600 mt-1">Protein</p>
+                  </div>
+                  <div className="text-center p-4 bg-white rounded-lg shadow-sm">
+                    <p className="text-2xl font-bold text-black">{result.carbs}g</p>
+                    <p className="text-xs text-gray-600 mt-1">Carbs</p>
+                  </div>
+                  <div className="text-center p-4 bg-white rounded-lg shadow-sm">
+                    <p className="text-2xl font-bold text-black">{result.fat}g</p>
+                    <p className="text-xs text-gray-600 mt-1">Fat</p>
+                  </div>
+                </div>
+
+                {/* Percentage Breakdown */}
+                <div className="mt-4 p-3 bg-white/50 rounded-lg">
+                  <p className="text-xs text-gray-600 text-center mb-2">Macro Split</p>
+                  <div className="flex justify-around text-xs">
+                    <div className="text-center">
+                      <p className="font-semibold text-gray-800">
+                        {Math.round((result.protein * 4 / result.calories) * 100)}%
+                      </p>
+                      <p className="text-gray-600">Protein</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="font-semibold text-gray-800">
+                        {Math.round((result.carbs * 4 / result.calories) * 100)}%
+                      </p>
+                      <p className="text-gray-600">Carbs</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="font-semibold text-gray-800">
+                        {Math.round((result.fat * 9 / result.calories) * 100)}%
+                      </p>
+                      <p className="text-gray-600">Fat</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 px-6 rounded-lg transition-colors"
+                >
+                  ← Recalculate
+                </button>
+                <Link
+                  to="/menu"
+                  className="block w-full text-center bg-primary-700 hover:bg-primary-800 text-white font-semibold py-3 px-6 rounded-lg transition-colors shadow-md"
+                >
+                  Build Meals →
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Form Section */}
+        {showForm && (
+          <div className="bg-white rounded-lg shadow-lg p-6 md:p-8">
+            <div className="mb-6">
+              <h2 className="text-2xl md:text-3xl font-bold text-primary-700 mb-2">Macro Calculator</h2>
+              <p className="text-gray-600">
+                Calculate your personalized daily macronutrient targets based on your goals
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="age" className="block text-sm font-medium text-gray-700 mb-2">
                 Age
@@ -136,25 +260,60 @@ function MacroCalculator() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Height</label>
-              <div className="grid grid-cols-2 gap-4">
-                <input
-                  type="number"
-                  value={feet}
-                  onChange={(e) => setFeet(e.target.value)}
-                  required
-                  placeholder="Feet"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
-                <input
-                  type="number"
-                  value={inches}
-                  onChange={(e) => setInches(e.target.value)}
-                  required
-                  placeholder="Inches"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-sm font-medium text-gray-700">Height</label>
+                <div className="flex items-center gap-3">
+                  <span className={`text-sm ${heightUnit === 'imperial' ? 'text-primary-700 font-medium' : 'text-gray-500'}`}>
+                    ft/in
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setHeightUnit(heightUnit === 'imperial' ? 'metric' : 'imperial')}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      heightUnit === 'metric' ? 'bg-primary-700' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        heightUnit === 'metric' ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                  <span className={`text-sm ${heightUnit === 'metric' ? 'text-primary-700 font-medium' : 'text-gray-500'}`}>
+                    cm
+                  </span>
+                </div>
               </div>
+              
+              {heightUnit === 'imperial' ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <input
+                    type="number"
+                    value={feet}
+                    onChange={(e) => setFeet(e.target.value)}
+                    required
+                    placeholder="Feet"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                  <input
+                    type="number"
+                    value={inches}
+                    onChange={(e) => setInches(e.target.value)}
+                    required
+                    placeholder="Inches"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
+              ) : (
+                <input
+                  type="number"
+                  value={heightCm}
+                  onChange={(e) => setHeightCm(e.target.value)}
+                  required
+                  placeholder="Height in centimeters"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+              )}
             </div>
 
             <div>
@@ -186,8 +345,8 @@ function MacroCalculator() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               >
                 <option value="maintain">Maintain Weight</option>
-                <option value="deficit">Lose Weight</option>
-                <option value="surplus">Gain Weight</option>
+                <option value="deficit">Lose Weight (Cut)</option>
+                <option value="bulk">Gain Weight (Bulk)</option>
               </select>
             </div>
 
@@ -198,34 +357,8 @@ function MacroCalculator() {
               Calculate Macros
             </button>
           </form>
-
-          {result && (
-            <div className="mt-8 p-6 bg-gradient-to-br from-primary-50 to-primary-100 rounded-lg border-2 border-primary-700">
-              <h3 className="text-xl font-semibold mb-4 text-primary-700">Your Daily Targets</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-                  <p className="text-3xl font-bold text-primary-700">{result.calories}</p>
-                  <p className="text-sm text-gray-600">Calories</p>
-                </div>
-                <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-                  <p className="text-3xl font-bold text-blue-600">{result.protein}g</p>
-                  <p className="text-sm text-gray-600">Protein</p>
-                </div>
-                <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-                  <p className="text-3xl font-bold text-yellow-600">{result.fat}g</p>
-                  <p className="text-sm text-gray-600">Fat</p>
-                </div>
-                <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-                  <p className="text-3xl font-bold text-orange-600">{result.carbs}g</p>
-                  <p className="text-sm text-gray-600">Carbs</p>
-                </div>
-              </div>
-              <p className="text-sm text-gray-600 mt-4 text-center">
-                Use the menu to build meals that match your macro targets
-              </p>
-            </div>
-          )}
         </div>
+        )}
       </main>
     </div>
   )

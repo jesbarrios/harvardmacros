@@ -50,9 +50,9 @@ export async function scrapeMealMenu(locationNum, date, mealType) {
             text.includes('Click') ||
             text.includes('daypart') ||
             text.includes('Top of Page') ||
-            // Skip serving size patterns (e.g., "1/2 CUP", "2 OZ", "EACH", etc.)
-            /^\d+(\.\d+)?\s*(OZ|EACH|PIECE|Roll|Pita|OZL|CUP|TBSP|TSP|G|ML|LB)L?$/i.test(text) ||
-            /^\d+\/\d+\s*(OZ|EACH|PIECE|Roll|Pita|OZL|CUP|TBSP|TSP|G|ML|LB)L?$/i.test(text) ||
+            // Skip serving size patterns (e.g., "1/2 CUP", "2 OZ", "1 SLICE", "EACH", etc.)
+            /^\d+(\.\d+)?\s*(OZ|EACH|PIECE|SLICE|SLICES|Roll|Pita|OZL|CUP|TBSP|TSP|G|ML|LB|SERVING|SERVINGS)L?$/i.test(text) ||
+            /^\d+\/\d+\s*(OZ|EACH|PIECE|SLICE|SLICES|Roll|Pita|OZL|CUP|TBSP|TSP|G|ML|LB|SERVING|SERVINGS)L?$/i.test(text) ||
             text.length > 100) {
           return;
         }
