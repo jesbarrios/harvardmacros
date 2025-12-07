@@ -5,6 +5,102 @@ import { Search, Calendar, MapPin, Utensils, X, Plus, Minus, UtensilsCrossed, Ch
 // API base URL - uses environment variable in production, localhost in development
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
+// LocalStorage utilities
+const STORAGE_KEYS = {
+  MENU_CACHE: 'harvardmacros_menu_cache',
+  NUTRITION_CACHE: 'harvardmacros_nutrition_cache',
+  SELECTED_ITEMS: 'harvardmacros_selected_items',
+  CACHE_TIMESTAMP: 'harvardmacros_cache_timestamp'
+}
+
+// Check if cache is still valid (expires at midnight)
+const isCacheValid = () => {
+  const timestamp = localStorage.getItem(STORAGE_KEYS.CACHE_TIMESTAMP)
+  if (!timestamp) return false
+  
+  const cacheDate = new Date(parseInt(timestamp))
+  const now = new Date()
+  
+  // Check if it's still the same day
+  return (
+    cacheDate.getDate() === now.getDate() &&
+    cacheDate.getMonth() === now.getMonth() &&
+    cacheDate.getFullYear() === now.getFullYear()
+  )
+}
+
+// Clear cache at midnight
+const clearExpiredCache = () => {
+  if (!isCacheValid()) {
+    localStorage.removeItem(STORAGE_KEYS.MENU_CACHE)
+    localStorage.removeItem(STORAGE_KEYS.NUTRITION_CACHE)
+    localStorage.setItem(STORAGE_KEYS.CACHE_TIMESTAMP, Date.now().toString())
+  }
+}
+
+// Get cached menu data
+const getCachedMenu = (location, meal, date) => {
+  if (!isCacheValid()) return null
+  
+  try {
+    const cache = JSON.parse(localStorage.getItem(STORAGE_KEYS.MENU_CACHE) || '{}')
+    const key = `${location}_${meal}_${date}`
+    return cache[key] || null
+  } catch {
+    return null
+  }
+}
+
+// Save menu data to cache
+const setCachedMenu = (location, meal, date, data) => {
+  try {
+    const cache = JSON.parse(localStorage.getItem(STORAGE_KEYS.MENU_CACHE) || '{}')
+    const key = `${location}_${meal}_${date}`
+    cache[key] = data
+    localStorage.setItem(STORAGE_KEYS.MENU_CACHE, JSON.stringify(cache))
+  } catch (error) {
+    console.error('Failed to cache menu:', error)
+  }
+}
+
+// Get cached nutrition data
+const getCachedNutrition = () => {
+  if (!isCacheValid()) return {}
+  
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.NUTRITION_CACHE) || '{}')
+  } catch {
+    return {}
+  }
+}
+
+// Save nutrition data to cache
+const setCachedNutrition = (cache) => {
+  try {
+    localStorage.setItem(STORAGE_KEYS.NUTRITION_CACHE, JSON.stringify(cache))
+  } catch (error) {
+    console.error('Failed to cache nutrition:', error)
+  }
+}
+
+// Get saved selected items (cart)
+const getSavedSelectedItems = () => {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.SELECTED_ITEMS) || '[]')
+  } catch {
+    return []
+  }
+}
+
+// Save selected items (cart)
+const saveSelectedItems = (items) => {
+  try {
+    localStorage.setItem(STORAGE_KEYS.SELECTED_ITEMS, JSON.stringify(items))
+  } catch (error) {
+    console.error('Failed to save selected items:', error)
+  }
+}
+
 function NewMenu() {
   const [locations, setLocations] = useState([])
   const [selectedLocation, setSelectedLocation] = useState('30')
@@ -27,12 +123,20 @@ function NewMenu() {
   const [menuData, setMenuData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [loadedFromCache, setLoadedFromCache] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedItems, setSelectedItems] = useState([])
+  const [selectedItems, setSelectedItems] = useState(() => {
+    // Load saved cart from localStorage
+    clearExpiredCache()
+    return getSavedSelectedItems()
+  })
   const [cartOpen, setCartOpen] = useState(false)
   const [expandedNutrition, setExpandedNutrition] = useState({})
   const [expandedMicronutrients, setExpandedMicronutrients] = useState({})
-  const [nutritionCache, setNutritionCache] = useState({})
+  const [nutritionCache, setNutritionCache] = useState(() => {
+    // Load cached nutrition data
+    return getCachedNutrition()
+  })
   const [loadingNutrition, setLoadingNutrition] = useState(new Set())
   const [showLoadingScreen, setShowLoadingScreen] = useState(() => {
     // Only show if we haven't shown it in this session yet
@@ -88,7 +192,18 @@ function NewMenu() {
   // Clear selected items when location changes
   useEffect(() => {
     setSelectedItems([])
+    saveSelectedItems([]) // Clear from localStorage too
   }, [selectedLocation])
+
+  // Save selected items to localStorage whenever they change
+  useEffect(() => {
+    saveSelectedItems(selectedItems)
+  }, [selectedItems])
+
+  // Save nutrition cache to localStorage whenever it changes
+  useEffect(() => {
+    setCachedNutrition(nutritionCache)
+  }, [nutritionCache])
 
   // Preload all nutrition data when menu loads
   useEffect(() => {
@@ -135,11 +250,26 @@ function NewMenu() {
     try {
       setLoading(true)
       setError(null)
+      
+      // Check cache first
+      const cachedData = getCachedMenu(selectedLocation, selectedMeal, selectedDate)
+      if (cachedData) {
+        setMenuData(cachedData)
+        setLoadedFromCache(true)
+        setLoading(false)
+        return
+      }
+      
+      // Fetch from API if not cached
+      setLoadedFromCache(false)
       const dateParam = selectedDate.replace(/\//g, '%2f')
       const response = await fetch(
         `${API_URL}/api/menu?location=${selectedLocation}&meal=${selectedMeal}&date=${dateParam}`
       )
       const data = await response.json()
+      
+      // Save to cache
+      setCachedMenu(selectedLocation, selectedMeal, selectedDate, data)
       setMenuData(data)
     } catch (err) {
       setError('Failed to load menu. Make sure the server is running.')

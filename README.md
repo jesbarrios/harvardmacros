@@ -11,6 +11,8 @@ A comprehensive React + Vite + Tailwind CSS application that scrapes and display
 - 📊 **Nutrition Data**: Complete macros and micronutrients for each item
 - 🧮 **Meal Calculator**: Select items and calculate total nutrition
 - ⚡ **Fast & Modern**: Built with Vite for lightning-fast development
+- 💾 **Smart Caching**: localStorage caching for instant loading (expires daily at midnight)
+- 🛒 **Persistent Cart**: Your meal selections survive page refreshes
 - 🎨 **Beautiful UI**: Tailwind CSS with responsive design
 
 ## 🚀 Quick Start
@@ -137,6 +139,7 @@ This will test all locations and display sample data.
 
 - **[API Documentation](server/API.md)** - Complete API reference
 - **[Data Structures](server/DATA_STRUCTURES.md)** - All data formats and structures
+- **[Caching System](CACHING.md)** - How localStorage caching works
 
 ## 🛠️ Tech Stack
 
