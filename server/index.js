@@ -12,18 +12,20 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:3000',
-  // Add your production frontend URL here after deploying to Netlify
-  // Example: 'https://your-site-name.netlify.app'
+  'https://harvardmacros.com',
+  'http://harvardmacros.com',
+  'https://www.harvardmacros.com',
+  'http://www.harvardmacros.com'
 ];
 
-// Allow any Netlify preview/production URLs
+// Allow any Netlify preview/production URLs and custom domain
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
     
-    // Allow localhost and Netlify domains
-    if (allowedOrigins.includes(origin) || origin.includes('.netlify.app')) {
+    // Allow localhost, Netlify domains, and harvardmacros.com
+    if (allowedOrigins.includes(origin) || origin.includes('.netlify.app') || origin.includes('harvardmacros.com')) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
