@@ -3,6 +3,7 @@ import Menu from './pages/Menu'
 import NotFound from './pages/NotFound'
 import MacroCalculator from './pages/MacroCalculator'
 
+//general routing back to the menu, macro calculator, or not found depending on condition
 function App() {
   return (
     <Router>
