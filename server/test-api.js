@@ -1,4 +1,4 @@
-// Test script to verify all scraping functions
+// test script to verify all scraping functions
 import { LOCATIONS, getAvailableDates } from './scrapers/locations.js';
 import { scrapeMealMenu } from './scrapers/menuScraper.js';
 
@@ -12,13 +12,13 @@ async function testAllLocations() {
   
   const testDate = dates[0].formatted;
   
-  // Test each location
+  // test at each location
   for (const [key, location] of Object.entries(LOCATIONS)) {
     console.log(`\n${'='.repeat(60)}`);
     console.log(`📍 Testing ${location.displayName} (${location.locationNum})`);
     console.log('='.repeat(60));
     
-    // Test lunch menu (all locations have lunch)
+    // test lunch menu (since locations have lunch)
     try {
       console.log(`\n🍽️  Fetching Lunch Menu...`);
       const lunchData = await scrapeMealMenu(location.locationNum, testDate, 'lunch');
@@ -42,16 +42,16 @@ async function testAllLocations() {
       }
       
     } catch (error) {
-      console.log(`❌ Error: ${error.message}`);
+      console.log(`X Error: ${error.message}`);
     }
     
-    // Skip breakfast/dinner for Flyby (lunch only)
+    // skip breakfast/dinner if flyby (lunch only)
     if (location.name === 'Flyby') {
       console.log(`\n⏭️  Skipping breakfast/dinner (Flyby is lunch only)`);
       continue;
     }
     
-    // Test breakfast
+    // test breakfast
     try {
       console.log(`\n🥞 Fetching Breakfast Menu...`);
       const breakfastData = await scrapeMealMenu(location.locationNum, testDate, 'breakfast');
@@ -60,7 +60,7 @@ async function testAllLocations() {
       console.log(`❌ Error: ${error.message}`);
     }
     
-    // Test dinner
+    // test dinner
     try {
       console.log(`\n🍝 Fetching Dinner Menu...`);
       const dinnerData = await scrapeMealMenu(location.locationNum, testDate, 'dinner');
