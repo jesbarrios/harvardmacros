@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Search, Calendar, MapPin, Utensils, X, Plus, Minus, UtensilsCrossed, ChevronDown } from 'lucide-react'
 
-// API base URL - uses environment variable in production, localhost in development
+// base url for api requests, uses environment variable in production or localhost in dev
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
-// LocalStorage utilities
+// keys used for local storage
 const STORAGE_KEYS = {
   MENU_CACHE: 'harvardmacros_menu_cache',
   NUTRITION_CACHE: 'harvardmacros_nutrition_cache',
@@ -13,7 +13,7 @@ const STORAGE_KEYS = {
   CACHE_TIMESTAMP: 'harvardmacros_cache_timestamp'
 }
 
-// Check if cache is still valid (expires at midnight)
+// check if the cache is still valid for today
 const isCacheValid = () => {
   const timestamp = localStorage.getItem(STORAGE_KEYS.CACHE_TIMESTAMP)
   if (!timestamp) return false
@@ -21,7 +21,7 @@ const isCacheValid = () => {
   const cacheDate = new Date(parseInt(timestamp))
   const now = new Date()
   
-  // Check if it's still the same day
+  // return true only if the date matches today
   return (
     cacheDate.getDate() === now.getDate() &&
     cacheDate.getMonth() === now.getMonth() &&
@@ -29,17 +29,17 @@ const isCacheValid = () => {
   )
 }
 
-// Clear cache at midnight
+// remove expired cache at midnight
 const clearExpiredCache = () => {
   if (!isCacheValid()) {
     localStorage.removeItem(STORAGE_KEYS.MENU_CACHE)
     localStorage.removeItem(STORAGE_KEYS.NUTRITION_CACHE)
-    localStorage.removeItem(STORAGE_KEYS.SELECTED_ITEMS) // Clear cart at midnight
+    localStorage.removeItem(STORAGE_KEYS.SELECTED_ITEMS) // also clear the cart
     localStorage.setItem(STORAGE_KEYS.CACHE_TIMESTAMP, Date.now().toString())
   }
 }
 
-// Get cached menu data
+// get menu data from cache for a specific location, meal, and date
 const getCachedMenu = (location, meal, date) => {
   if (!isCacheValid()) return null
   
@@ -52,7 +52,7 @@ const getCachedMenu = (location, meal, date) => {
   }
 }
 
-// Save menu data to cache
+// save menu data to cache
 const setCachedMenu = (location, meal, date, data) => {
   try {
     const cache = JSON.parse(localStorage.getItem(STORAGE_KEYS.MENU_CACHE) || '{}')
@@ -64,7 +64,7 @@ const setCachedMenu = (location, meal, date, data) => {
   }
 }
 
-// Get cached nutrition data
+// get cached nutrition data
 const getCachedNutrition = () => {
   if (!isCacheValid()) return {}
   
@@ -75,7 +75,7 @@ const getCachedNutrition = () => {
   }
 }
 
-// Save nutrition data to cache
+// save nutrition cache
 const setCachedNutrition = (cache) => {
   try {
     localStorage.setItem(STORAGE_KEYS.NUTRITION_CACHE, JSON.stringify(cache))
@@ -84,7 +84,7 @@ const setCachedNutrition = (cache) => {
   }
 }
 
-// Get saved selected items (cart)
+// get saved items in the cart
 const getSavedSelectedItems = () => {
   try {
     const savedData = localStorage.getItem(STORAGE_KEYS.SELECTED_ITEMS)
@@ -95,13 +95,13 @@ const getSavedSelectedItems = () => {
     
     const saved = JSON.parse(savedData)
     
-    // Check if saved items are from today
+    // only return items if they are from today
     const timestamp = localStorage.getItem(STORAGE_KEYS.CACHE_TIMESTAMP)
     if (timestamp && isCacheValid()) {
       return saved
     }
     
-    // Clear if from different day
+    // if items are from a different day, clear them
     return []
   } catch (error) {
     console.error('Error loading cart:', error)
@@ -109,7 +109,7 @@ const getSavedSelectedItems = () => {
   }
 }
 
-// Save selected items (cart)
+// save selected items to local storage
 const saveSelectedItems = (items) => {
   try {
     const data = JSON.stringify(items)
@@ -119,7 +119,7 @@ const saveSelectedItems = (items) => {
   }
 }
 
-// Get saved macro targets
+// get saved macro targets from previous calculator use
 const getSavedMacroTargets = () => {
   try {
     const saved = localStorage.getItem('harvardmacros_macro_targets')
@@ -129,7 +129,7 @@ const getSavedMacroTargets = () => {
   }
 }
 
-// Save macro targets
+// save macro targets to local storage
 const saveMacroTargets = (targets) => {
   try {
     localStorage.setItem('harvardmacros_macro_targets', JSON.stringify(targets))
@@ -139,130 +139,134 @@ const saveMacroTargets = (targets) => {
 }
 
 function NewMenu() {
+  // state for locations and current selection
   const [locations, setLocations] = useState([])
   const [selectedLocation, setSelectedLocation] = useState('30')
+  
+  // auto select meal based on current time
   const [selectedMeal, setSelectedMeal] = useState(() => {
-    // Auto-select meal based on current time
     const now = new Date()
     const hour = now.getHours()
     if (hour < 10) return 'breakfast'
     if (hour < 14) return 'lunch'
     return 'dinner'
   })
+
+  // default to today's date
   const [selectedDate, setSelectedDate] = useState(() => {
-    // Format today's date as MM/DD/YYYY
     const today = new Date()
     const month = String(today.getMonth() + 1).padStart(2, '0')
     const day = String(today.getDate()).padStart(2, '0')
     const year = today.getFullYear()
     return `${month}/${day}/${year}`
   })
+
+  // menu data and loading/error states
   const [menuData, setMenuData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [loadedFromCache, setLoadedFromCache] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+
+  // cart states
   const [selectedItems, setSelectedItems] = useState(() => {
-    // Load saved cart from localStorage
     clearExpiredCache()
-    // Ensure timestamp exists
     if (!localStorage.getItem(STORAGE_KEYS.CACHE_TIMESTAMP)) {
       localStorage.setItem(STORAGE_KEYS.CACHE_TIMESTAMP, Date.now().toString())
     }
     return getSavedSelectedItems()
   })
   const [cartOpen, setCartOpen] = useState(false)
+
+  // expanded views for nutrition info
   const [expandedNutrition, setExpandedNutrition] = useState({})
   const [expandedMicronutrients, setExpandedMicronutrients] = useState({})
-  const [nutritionCache, setNutritionCache] = useState(() => {
-    // Load cached nutrition data
-    return getCachedNutrition()
-  })
+  
+  // nutrition cache and loading state
+  const [nutritionCache, setNutritionCache] = useState(() => getCachedNutrition())
   const [loadingNutrition, setLoadingNutrition] = useState(new Set())
+
+  // loading screen states
   const [showLoadingScreen, setShowLoadingScreen] = useState(() => {
-    // Only show if we haven't shown it in this session yet
     return !sessionStorage.getItem('loadingScreenShown')
   })
   const [loadingScreenFadeOut, setLoadingScreenFadeOut] = useState(false)
+
+  // sidebar and sidebar micro states
   const [sidebarClosing, setSidebarClosing] = useState(false)
   const [expandedSidebarMicros, setExpandedSidebarMicros] = useState(false)
   const [expandedSidebarItemMicros, setExpandedSidebarItemMicros] = useState({})
 
-  // Filter states
+  // filter states
   const [filterVegan, setFilterVegan] = useState(false)
   const [filterVegetarian, setFilterVegetarian] = useState(false)
   const [filterHalal, setFilterHalal] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState(null)
 
-  // Mobile dropdown states
+  // mobile dropdown states
   const [mobileLocationOpen, setMobileLocationOpen] = useState(false)
   const [mobileDateOpen, setMobileDateOpen] = useState(false)
   const [mobileMealOpen, setMobileMealOpen] = useState(false)
 
-  // Macro targets from calculator
+  // macro targets from calculator
   const [macroTargets, setMacroTargets] = useState(() => getSavedMacroTargets())
 
+  // load initial data and handle loading screen
   useEffect(() => {
-    // Start fetching data immediately during loading screen
     fetchLocations()
-    fetchMenu() // Fetch menu data in background
+    fetchMenu()
     
-    // Only run loading screen timer if it should show
     if (showLoadingScreen) {
-      // Prevent scrolling during loading screen
+      // disable scrolling while loading screen is active
       document.body.style.overflow = 'hidden'
-      
-      // Mark that we've shown the loading screen in this session
       sessionStorage.setItem('loadingScreenShown', 'true')
       
-      // Start fade-out after 3.5 seconds
-      const fadeTimer = setTimeout(() => {
-        setLoadingScreenFadeOut(true)
-      }, 3500)
-      // Remove loading screen after fade completes
+      // fade out the loading screen after 3.5 seconds
+      const fadeTimer = setTimeout(() => setLoadingScreenFadeOut(true), 3500)
       const removeTimer = setTimeout(() => {
         setShowLoadingScreen(false)
-        // Re-enable scrolling
         document.body.style.overflow = 'unset'
       }, 4000)
+      
       return () => {
         clearTimeout(fadeTimer)
         clearTimeout(removeTimer)
-        // Ensure scrolling is re-enabled on cleanup
         document.body.style.overflow = 'unset'
       }
     }
   }, [])
 
+  // refetch menu whenever selection changes
   useEffect(() => {
     if (selectedLocation) {
       fetchMenu()
     }
   }, [selectedLocation, selectedMeal, selectedDate])
 
-  // Clear selected items when location changes
+  // clear selected items when changing location
   useEffect(() => {
     setSelectedItems([])
-    saveSelectedItems([]) // Clear from localStorage too
+    saveSelectedItems([])
   }, [selectedLocation])
 
-  // Save selected items to localStorage whenever they change
+  // save cart to local storage whenever items change
   useEffect(() => {
     saveSelectedItems(selectedItems)
   }, [selectedItems])
 
-  // Save nutrition cache to localStorage whenever it changes
+  // save nutrition cache to local storage whenever it changes
   useEffect(() => {
     setCachedNutrition(nutritionCache)
   }, [nutritionCache])
 
-  // Preload all nutrition data when menu loads
+  // preload all nutrition info when menu data is loaded
   useEffect(() => {
     if (menuData?.categories) {
       preloadAllNutrition()
     }
   }, [menuData])
 
+  // fetch nutrition for all items in batches to avoid overloading server
   const preloadAllNutrition = async () => {
     const allItems = []
     Object.entries(menuData.categories).forEach(([category, items]) => {
@@ -271,8 +275,7 @@ function NewMenu() {
       })
     })
 
-    // Fetch all nutrition data in parallel (with some rate limiting)
-    const batchSize = 5 // Fetch 5 at a time to avoid overwhelming the server
+    const batchSize = 5
     for (let i = 0; i < allItems.length; i += batchSize) {
       const batch = allItems.slice(i, i + batchSize)
       await Promise.all(
@@ -286,6 +289,7 @@ function NewMenu() {
     }
   }
 
+  // fetch available locations from api
   const fetchLocations = async () => {
     try {
       const response = await fetch(`${API_URL}/api/locations`)
@@ -297,12 +301,12 @@ function NewMenu() {
     }
   }
 
+  // fetch menu data, checking cache first
   const fetchMenu = async () => {
     try {
       setLoading(true)
       setError(null)
       
-      // Check cache first
       const cachedData = getCachedMenu(selectedLocation, selectedMeal, selectedDate)
       if (cachedData) {
         setMenuData(cachedData)
@@ -311,15 +315,12 @@ function NewMenu() {
         return
       }
       
-      // Fetch from API if not cached
       setLoadedFromCache(false)
       const dateParam = selectedDate.replace(/\//g, '%2f')
       const response = await fetch(
         `${API_URL}/api/menu?location=${selectedLocation}&meal=${selectedMeal}&date=${dateParam}`
       )
       const data = await response.json()
-      
-      // Save to cache
       setCachedMenu(selectedLocation, selectedMeal, selectedDate, data)
       setMenuData(data)
     } catch (err) {
@@ -330,6 +331,7 @@ function NewMenu() {
     }
   }
 
+  // fetch nutrition for a single item if not cached
   const fetchNutrition = async (itemKey, itemName) => {
     if (nutritionCache[itemKey]) return
 
@@ -337,7 +339,6 @@ function NewMenu() {
 
     try {
       const dateParam = selectedDate.replace(/\//g, '%2f')
-      
       const response = await fetch(
         `${API_URL}/api/nutrition/item?location=${selectedLocation}&date=${dateParam}&meal=${selectedMeal}&name=${encodeURIComponent(
           itemName
@@ -366,6 +367,7 @@ function NewMenu() {
     }
   }
 
+  // toggle expanded view for nutrition info
   const toggleNutrition = async (category, itemName) => {
     const itemKey = `${category}-${itemName}`
     const isCurrentlyExpanded = expandedNutrition[itemKey]
@@ -380,6 +382,7 @@ function NewMenu() {
     }
   }
 
+  // toggle expanded view for micronutrients
   const toggleMicronutrients = (category, itemName) => {
     const itemKey = `${category}-${itemName}`
     setExpandedMicronutrients((prev) => ({
@@ -388,17 +391,17 @@ function NewMenu() {
     }))
   }
 
+  // close sidebar and re-enable scrolling
   const handleCloseSidebar = () => {
     setSidebarClosing(true)
     setTimeout(() => {
       setCartOpen(false)
       setSidebarClosing(false)
-      // Re-enable body scroll
       document.body.style.overflow = 'unset'
-    }, 300) // Match animation duration
+    }, 300)
   }
 
-  // Prevent body scroll when sidebar is open
+  // prevent scrolling when sidebar is open
   useEffect(() => {
     if (cartOpen) {
       document.body.style.overflow = 'hidden'
@@ -410,7 +413,7 @@ function NewMenu() {
     }
   }, [cartOpen])
 
-  // Close mobile dropdowns when clicking outside
+  // close mobile dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (!e.target.closest('.mobile-dropdown')) {
@@ -423,6 +426,7 @@ function NewMenu() {
     return () => document.removeEventListener('click', handleClickOutside)
   }, [])
 
+  // add item to cart
   const handleAddToMeal = (item, category) => {
     const existingIndex = selectedItems.findIndex(
       (selected) => selected.item.name === item.name && selected.category === category
@@ -437,6 +441,7 @@ function NewMenu() {
     }
   }
 
+  // remove item from cart
   const handleRemoveFromMeal = (item, category) => {
     const existingIndex = selectedItems.findIndex(
       (selected) => selected.item.name === item.name && selected.category === category
@@ -453,13 +458,16 @@ function NewMenu() {
     }
   }
 
+  // get quantity of a specific item in the cart
   const getItemQuantity = (itemName, category) => {
     const found = selectedItems.find((selected) => selected.item.name === itemName && selected.category === category)
     return found ? found.quantity : 0
   }
 
+  // total number of items in cart
   const totalItemCount = selectedItems.reduce((sum, { quantity }) => sum + quantity, 0)
 
+  // calculate total macros for selected items
   const totalMacros = selectedItems.reduce(
     (acc, { item, category, quantity }) => {
       const itemKey = `${category}-${item.name}`
@@ -478,6 +486,7 @@ function NewMenu() {
     { calories: 0, protein: 0, carbs: 0, fat: 0 }
   )
 
+  // calculate total micronutrients for selected items
   const totalMicronutrients = selectedItems.reduce(
     (acc, { item, category, quantity }) => {
       const itemKey = `${category}-${item.name}`
@@ -500,8 +509,8 @@ function NewMenu() {
       }
       return acc
     },
-    { saturatedFat: 0, transFat: 0, fiber: 0, sugar: 0, addedSugar: 0, cholesterol: 0, sodium: 0, potassium: 0, calcium: 0, iron: 0, vitaminD: 0 }
-  )
+    { saturatedFat: 0, transFat: 0, fiber: 0, sugar: 0, addedSugar: 0, cholesterol: 0, sodium: 0, potassium: 0, calcium
+
 
   // Log state data structures
   // Generate available dates (today + 6 days)
