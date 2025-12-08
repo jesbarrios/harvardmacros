@@ -22,3 +22,4 @@ primary_region = "bos" # Boston - closest to Harvard!
   cpus = 1
   memory_mb = 256
 
+
