@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 
+//classic website not found error check
 function NotFound() {
   return (
     <div className="min-h-screen bg-primary-700">
