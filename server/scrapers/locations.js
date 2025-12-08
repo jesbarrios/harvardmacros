@@ -1,4 +1,4 @@
-// Dining hall location configurations
+// dining hall location possible configurations
 export const LOCATIONS = {
   ANNENBERG: {
     id: '30',
@@ -41,9 +41,10 @@ export const MEAL_TYPES = {
   DINNER: 'dinner'
 };
 
-// Get the correct meal name for a location
+// getting correct meal name for each location
 export function getMealName(locationNum, mealType) {
   const location = Object.values(LOCATIONS).find(loc => loc.locationNum === locationNum);
+  // quick error check for if there isn't a location or there isnt a mealname
   if (!location) {
     throw new Error(`Unknown location: ${locationNum}`);
   }
@@ -56,7 +57,7 @@ export function getMealName(locationNum, mealType) {
   return mealName;
 }
 
-// Get available meals for a location
+// getting available meals for a location
 export function getAvailableMeals(locationNum) {
   const location = Object.values(LOCATIONS).find(loc => loc.locationNum === locationNum);
   if (!location) {
@@ -71,7 +72,7 @@ export function getAvailableMeals(locationNum) {
   return meals;
 }
 
-// Get available dates (today + 6 days)
+// Get available dates (today + 6 days is all thats available)
 export function getAvailableDates() {
   const dates = [];
   const today = new Date();
@@ -95,13 +96,13 @@ export function getAvailableDates() {
   return dates;
 }
 
-// Build menu URL for a specific location, date, and meal
+// making menu URL for a specific location, date, and meal
 export function buildMenuUrl(locationNum, date, mealName) {
   const BASE_URL = 'https://www.foodpro.huds.harvard.edu/foodpro/longmenucopy.aspx';
   return `${BASE_URL}?sName=HARVARD+UNIVERSITY+DINING+SERVICES&locationNum=${locationNum}&locationName=Dining+Hall&naFlag=1&WeeksMenus=This+Week%27s+Menus&dtdate=${date}&mealName=${encodeURIComponent(mealName)}`;
 }
 
-// Build nutrition report URL
+// making nutrition report URL
 export function buildNutritionUrl(locationNum, date, mealName) {
   const BASE_URL = 'https://www.foodpro.huds.harvard.edu/foodpro/showreport.aspx';
   return `${BASE_URL}?locationNum=${locationNum}&locationName=Dining+Hall&dtdate=${date}&mealName=${encodeURIComponent(mealName)}&sName=HARVARD+UNIVERSITY+DINING+SERVICES`;
