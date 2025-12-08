@@ -8,7 +8,7 @@
   }
 }
 
-/* Custom scrollbar - minimal and subtle */
+/* sustom scrollbar - minimal and subtle */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -27,7 +27,7 @@
   background-color: rgba(0, 0, 0, 0.2);
 }
 
-/* Firefox scrollbar */
+/* firefox scrollbar */
 * {
   scrollbar-width: thin;
   scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
@@ -47,7 +47,7 @@
   animation: fadeOut 0.5s ease-out forwards;
 }
 
-/* Slower spin animation for loading circle */
+/* slower spin animation for loading circle */
 @keyframes slowSpin {
   from {
     transform: rotate(0deg);
@@ -61,7 +61,7 @@
   animation: slowSpin 1.5s linear infinite;
 }
 
-/* Sidebar slide-in animation */
+/* sidebar slide-in animation */
 @keyframes slideInRight {
   from {
     transform: translateX(100%);
