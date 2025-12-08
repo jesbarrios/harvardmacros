@@ -34,6 +34,7 @@ const clearExpiredCache = () => {
   if (!isCacheValid()) {
     localStorage.removeItem(STORAGE_KEYS.MENU_CACHE)
     localStorage.removeItem(STORAGE_KEYS.NUTRITION_CACHE)
+    localStorage.removeItem(STORAGE_KEYS.SELECTED_ITEMS) // Clear cart at midnight
     localStorage.setItem(STORAGE_KEYS.CACHE_TIMESTAMP, Date.now().toString())
   }
 }
@@ -86,8 +87,24 @@ const setCachedNutrition = (cache) => {
 // Get saved selected items (cart)
 const getSavedSelectedItems = () => {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEYS.SELECTED_ITEMS) || '[]')
-  } catch {
+    const savedData = localStorage.getItem(STORAGE_KEYS.SELECTED_ITEMS)
+    
+    if (!savedData) {
+      return []
+    }
+    
+    const saved = JSON.parse(savedData)
+    
+    // Check if saved items are from today
+    const timestamp = localStorage.getItem(STORAGE_KEYS.CACHE_TIMESTAMP)
+    if (timestamp && isCacheValid()) {
+      return saved
+    }
+    
+    // Clear if from different day
+    return []
+  } catch (error) {
+    console.error('Error loading cart:', error)
     return []
   }
 }
@@ -95,9 +112,29 @@ const getSavedSelectedItems = () => {
 // Save selected items (cart)
 const saveSelectedItems = (items) => {
   try {
-    localStorage.setItem(STORAGE_KEYS.SELECTED_ITEMS, JSON.stringify(items))
+    const data = JSON.stringify(items)
+    localStorage.setItem(STORAGE_KEYS.SELECTED_ITEMS, data)
   } catch (error) {
     console.error('Failed to save selected items:', error)
+  }
+}
+
+// Get saved macro targets
+const getSavedMacroTargets = () => {
+  try {
+    const saved = localStorage.getItem('harvardmacros_macro_targets')
+    return saved ? JSON.parse(saved) : null
+  } catch {
+    return null
+  }
+}
+
+// Save macro targets
+const saveMacroTargets = (targets) => {
+  try {
+    localStorage.setItem('harvardmacros_macro_targets', JSON.stringify(targets))
+  } catch (error) {
+    console.error('Failed to save macro targets:', error)
   }
 }
 
@@ -128,6 +165,10 @@ function NewMenu() {
   const [selectedItems, setSelectedItems] = useState(() => {
     // Load saved cart from localStorage
     clearExpiredCache()
+    // Ensure timestamp exists
+    if (!localStorage.getItem(STORAGE_KEYS.CACHE_TIMESTAMP)) {
+      localStorage.setItem(STORAGE_KEYS.CACHE_TIMESTAMP, Date.now().toString())
+    }
     return getSavedSelectedItems()
   })
   const [cartOpen, setCartOpen] = useState(false)
@@ -157,6 +198,9 @@ function NewMenu() {
   const [mobileLocationOpen, setMobileLocationOpen] = useState(false)
   const [mobileDateOpen, setMobileDateOpen] = useState(false)
   const [mobileMealOpen, setMobileMealOpen] = useState(false)
+
+  // Macro targets from calculator
+  const [macroTargets, setMacroTargets] = useState(() => getSavedMacroTargets())
 
   useEffect(() => {
     // Start fetching data immediately during loading screen
@@ -1218,6 +1262,40 @@ function NewMenu() {
                   <X className="h-5 w-5" />
                 </button>
               </div>
+
+              {/* Macro Targets Section */}
+              {macroTargets && (
+                <div className="p-4 bg-gradient-to-br from-red-50 to-red-100 border-b-2 border-primary-700">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-semibold text-primary-800">Your Daily Targets</h3>
+                    <Link
+                      to="/calculator"
+                      onClick={() => setCartOpen(false)}
+                      className="text-xs text-primary-700 hover:text-primary-900 font-medium underline"
+                    >
+                      Update
+                    </Link>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2 text-center">
+                    <div className="bg-white/70 rounded p-2">
+                      <div className="text-lg font-bold text-primary-800">{macroTargets.calories}</div>
+                      <div className="text-xs text-primary-700">Cal</div>
+                    </div>
+                    <div className="bg-white/70 rounded p-2">
+                      <div className="text-lg font-bold text-primary-800">{macroTargets.protein}g</div>
+                      <div className="text-xs text-primary-700">Protein</div>
+                    </div>
+                    <div className="bg-white/70 rounded p-2">
+                      <div className="text-lg font-bold text-primary-800">{macroTargets.carbs}g</div>
+                      <div className="text-xs text-primary-700">Carbs</div>
+                    </div>
+                    <div className="bg-white/70 rounded p-2">
+                      <div className="text-lg font-bold text-primary-800">{macroTargets.fat}g</div>
+                      <div className="text-xs text-primary-700">Fat</div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {selectedItems.length === 0 ? (
                 <div className="flex-1 flex items-center justify-center text-gray-500">

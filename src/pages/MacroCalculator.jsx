@@ -58,35 +58,53 @@ function MacroCalculator() {
     // Calculate TDEE (maintenance calories)
     const TDEE = BMR * parseFloat(activity)
 
-    // Adjust calories and protein based on goal
-    let calories, protein
-    if (goal === 'deficit' || goal === 'cut') {
+    // Calculate BMI
+    const heightM = cm / 100
+    const BMI = weightKg / (heightM ** 2)
+
+    // Adjust calories and protein based on goal (RESEARCH SUPPORTED)
+    let calories, proteinPerLb
+    
+    if (goal === 'deficit' || goal === 'cut' || goal === 'weight_loss') {
       calories = TDEE * 0.85  // 15% deficit
-      protein = weightLb * 1.15  // Higher protein for cutting
-    } else if (goal === 'bulk') {
+      proteinPerLb = 1.1  // Research-supported to preserve muscle during cutting
+    } else if (goal === 'bulk' || goal === 'surplus') {
       calories = TDEE * 1.10  // 10% surplus
-      protein = weightLb * 1.05  // Moderate protein for bulking
-    } else {
-      calories = TDEE  // Maintenance
-      protein = weightLb * 0.85  // Standard protein
+      proteinPerLb = BMI < 25 ? 0.9 : 0.8  // Research-supported moderate protein
+    } else {  // maintenance
+      calories = TDEE
+      proteinPerLb = 0.8  // Research-supported
     }
 
-    // Calculate fat (minimum 0.30g per lb, prefer 28% of calories)
-    const fatMin = weightLb * 0.30
-    const fatPref = (0.28 * calories) / 9
-    const fat = Math.max(fatMin, fatPref)
+    const protein = proteinPerLb * weightLb
+
+    // Calculate fat (minimum healthy fat)
+    // - ≥0.25 g/lb
+    // - ≥20% of total calories
+    const fatMinWeight = 0.25 * weightLb
+    const fatMinCal = (0.20 * calories) / 9
+    const fat = Math.max(fatMinWeight, fatMinCal)
 
     // Calculate carbs from remaining calories
-    const carbCalories = calories - protein * 4 - fat * 9
-    const carbs = carbCalories < 200 ? 50 : carbCalories / 4
+    const remainingCal = calories - (protein * 4) - (fat * 9)
+    const carbs = Math.max(remainingCal / 4, 30)  // Never go below 30g
 
-    setResult({
+    const macroTargets = {
       maintenance: Math.round(TDEE),
       calories: Math.round(calories),
       protein: Math.round(protein),
       fat: Math.round(fat),
       carbs: Math.round(carbs),
-    })
+    }
+    
+    setResult(macroTargets)
+    
+    // Save to localStorage for use in Menu page
+    try {
+      localStorage.setItem('harvardmacros_macro_targets', JSON.stringify(macroTargets))
+    } catch (error) {
+      console.error('Failed to save macro targets:', error)
+    }
     
     // Hide form and show results
     setShowForm(false)

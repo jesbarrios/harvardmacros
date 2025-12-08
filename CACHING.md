@@ -17,7 +17,14 @@ Harvard Macros uses localStorage to cache data and improve performance.
 ### 3. Selected Items (Cart)
 - **Key**: `harvardmacros_selected_items`
 - **Contains**: Your "My Meal" selections with quantities
-- **Benefits**: Cart persists across page refreshes and browser sessions
+- **Benefits**: Cart persists across page refreshes
+- **Expiration**: Clears at midnight (same as menu cache)
+
+### 4. Macro Targets
+- **Key**: `harvardmacros_macro_targets`
+- **Contains**: Your calculated daily macro targets from the calculator
+- **Benefits**: Shows your targets in the "My Meal" sidebar for reference
+- **Expiration**: Never expires (persists until recalculated)
 
 ## Cache Expiration
 
@@ -29,11 +36,17 @@ All menu and nutrition caches automatically expire at midnight to ensure fresh d
 - **Auto-Clear**: Removes stale data when you visit the site after midnight
 
 ### Cart Persistence
-- Selected items (cart) do **NOT** expire at midnight
-- Cart persists indefinitely until you:
-  - Clear it manually
+- Selected items (cart) **expire at midnight** (same as menu cache)
+- This prevents confusion with outdated menu items
+- Cart clears when you:
+  - Visit after midnight
   - Switch to a different dining hall
   - Clear browser data
+
+### Macro Targets Persistence
+- Macro targets **never expire**
+- Persists until you recalculate
+- Available across all sessions
 
 ## How It Works
 
@@ -85,6 +98,17 @@ All menu and nutrition caches automatically expire at midnight to ensure fresh d
     "quantity": 2
   }
 ]
+```
+
+### Macro Targets
+```javascript
+{
+  "maintenance": 2450,
+  "calories": 2083,
+  "protein": 207,
+  "fat": 65,
+  "carbs": 195
+}
 ```
 
 ## Storage Limits
