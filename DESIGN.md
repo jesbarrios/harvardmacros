@@ -1,0 +1,28 @@
+## Architecture Overview
+Harvard Macros uses a clear client–server design. The browser runs a React app built with Vite that handles the layout, user events, and local state. Menu data is kept in local storage so repeat visits load faster, and page changes feel smooth because all routing stays on the client. The server is an Express app on Railway. It exposes a small set of JSON endpoints and runs all scraping of the Harvard Dining site. It also controls CORS and sends structured error messages. Keeping scraping on the server prevents the browser from showing any scraping logic and keeps the client focused on the user’s flow.
+
+## Technology Stack Decisions
+React gives us a simple way to build an interactive page, and we were already comfortable with hooks and a component-based layout. Hooks like use-state and use-effect hold things like chosen items, filters, and menu data. We used Vite to speed up local work and aid with quick reloads in general. We also used express to help unify different language usage. This avoids switching between different tool sets and works well with JSON. Node handles scraping with no trouble, and tools such as Axios and Cheerio are built for this type of work. Hosting support for Node is also strong.
+
+## Data Intake Strategy
+The dining site does not offer a public API, so scraping is the only stable way to gather data. Manual entry would fail as soon as the site changed. The server uses Axios to fetch each page and Cheerio to pick out the needed fields. The dining site builds its pages on the server, so a light parser is enough. Cheerio lets us read item names, tags, and groups using simple CSS picks. We slow down requests to avoid stressing Harvard’s servers, and we cache results on the client to avoid needless fetches. Each scraper is kept in its own file so a layout change on the dining site can be fixed without touching the rest of the code.
+
+## Frontend Layout
+The client uses a pages-plus-components pattern. Most logic sits in the main menu page because splitting it any further would create heavy prop chains or require a global store. Keeping related projects/functions in one small place helped keep the flow clean and lowered the chance of bugs. We track state for locations, dates, meals, menu items, chosen items, search text, filters, groups, and cached nutrition. Separate state pieces avoid tangled nested objects. We tried to make the frontend as inviting as possible, making buttons that are commonly pressed brighter colors, and orienting relevant information in an easily digestible (ha!) way. React Router handles three main paths: the menu, the macro page, and a fallback page. Since routing is on the client, state doesnt need to reset. Styling is done with Tailwind utility classes, with a few custom rules for scrollbars and fade effects. React helped make many of these decisions.
+
+## Backend Layout
+The server returns JSON for locations, dates, menus, nutrition data, and a simple health check. Each endpoint checks input so the scraper never runs with wrong fields.
+Scraping is split into three parts: one for dining hall info, one for menus, and one for nutrition. The menu scraper builds the full URL from the hall, date, and meal. Then it downloads the page, finds every menu item, filters out lines that only show serving sizes, and reads tags such as vegan, vegetarian, and halal. CORS only allows calls from approved domains to prevent abuse and keep the door open for future sign-in systems.
+
+## Macro Calculator Logic
+The calculator uses the Mifflin–St. Jeor method to estimate base energy burn, then adjusts it with an activity factor. Cutting drops calories by about fifteen percent, bulking raises them by about ten percent, and maintenance stays unchanged. These ranges are common in nutrition research and give steady results. Protein goals shift based on the user’s aim. Cutting uses more protein to help preserve muscle. Bulking and maintenance use slightly less. Fat has a minimum level linked to body weight or a share of total calories because dropping fat too far is unsafe. Carbs fill the rest. Users with a higher BMI get a small protein change during bulking so the model does not assume their full gain is muscle. Menu filters run in layers: first tags, then groups, then the search bar. This avoids needless checks and keeps the code easy to follow.
+
+## Data Flow and State
+Menu and nutrition data are stored in localStorage with an end time set to midnight, which matches the dining site’s daily update. When the app loads, it checks the expiration stamp. If the data is old, it fetches new data. Macro settings rarely change, so they stay in storage with no end time. Once a menu loads, the app can prefetch missing nutrition entries in the background. It fetches each item one by one with short pauses so the user does not wait when tapping an item and so the server and the dining site are not hit all at once.
+
+## Speed and Load
+The client uses code splitting, minified builds, and removal of unused imports to keep files small. Pages load assets only when needed. Heavy steps use memoization so they do not restart unless inputs change. Search input is slowed slightly with a debounce so filters do not run on every key press. Hidden parts of the page are not mounted.
+A loading screen appears only on first load, so the initial scrape does not feel slow.
+
+## Deployment
+The website is on Netlify, which gives us global CDN hosting, simple builds, and clean handling of single-page routes. The backend server is on Railway. Railway keeps the service awake more often than other free hosts and gives clear logs for tracing errors. The domain harvardmacros.com points to the Netlify site, and SSL is handled for us.

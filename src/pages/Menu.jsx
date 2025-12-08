@@ -509,8 +509,8 @@ function NewMenu() {
       }
       return acc
     },
-    { saturatedFat: 0, transFat: 0, fiber: 0, sugar: 0, addedSugar: 0, cholesterol: 0, sodium: 0, potassium: 0, calcium
-
+    { saturatedFat: 0, transFat: 0, fiber: 0, sugar: 0, addedSugar: 0, cholesterol: 0, sodium: 0, potassium: 0, calcium: 0, iron: 0, vitaminD: 0 }
+  )
 
   // Log state data structures
   // Generate available dates (today + 6 days)
