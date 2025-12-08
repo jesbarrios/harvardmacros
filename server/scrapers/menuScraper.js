@@ -10,7 +10,7 @@ import { buildMenuUrl, getMealName, getAvailableMeals } from './locations.js';
  * @returns {Object} Menu data organized by categories
  */
 export async function scrapeMealMenu(locationNum, date, mealType) {
-  // Get the correct meal name for this location
+  // get the correct meal name for this location
   const mealName = getMealName(locationNum, mealType);
   const url = buildMenuUrl(locationNum, date, mealName);
   
@@ -35,7 +35,7 @@ export async function scrapeMealMenu(locationNum, date, mealType) {
       
       if (!text) return;
       
-      // Check if this is a category header (starts and ends with --)
+      // check if this is a category header (starts and ends with --)
       if (text.startsWith('--') && text.endsWith('--')) {
         currentCategory = text.replace(/^--\s*/, '').replace(/\s*--$/, '').trim();
         if (currentCategory && !categories[currentCategory]) {
@@ -43,33 +43,33 @@ export async function scrapeMealMenu(locationNum, date, mealType) {
           seenItems.clear();
         }
       } else if (currentCategory && text.length > 0) {
-        // Skip navigation text, headers, and serving sizes
+        // skip navigation text, headers, and serving sizes
         if (text.includes('Menu') || 
             text.includes('Select') || 
             text.includes('nutritional') ||
             text.includes('Click') ||
             text.includes('daypart') ||
             text.includes('Top of Page') ||
-            // Skip serving size patterns (e.g., "1/2 CUP", "2 OZ", "1 SLICE", "EACH", etc.)
+            // skip serving size patterns (like 1/2 CUP, 2 OZ, etc.)
             /^\d+(\.\d+)?\s*(OZ|EACH|PIECE|SLICE|SLICES|Roll|Pita|OZL|CUP|TBSP|TSP|G|ML|LB|SERVING|SERVINGS)L?$/i.test(text) ||
             /^\d+\/\d+\s*(OZ|EACH|PIECE|SLICE|SLICES|Roll|Pita|OZL|CUP|TBSP|TSP|G|ML|LB|SERVING|SERVINGS)L?$/i.test(text) ||
             text.length > 100) {
           return;
         }
         
-        // Skip duplicates
+        // skip duplicates
         const itemKey = `${currentCategory}:${text}`;
         if (seenItems.has(itemKey)) {
           return;
         }
         seenItems.add(itemKey);
         
-        // Extract dietary information from icons
+        // extract dietary information from icons
         const isVegan = $cell.find('img[src*="vgn.gif"]').length > 0;
         const isVegetarian = $cell.find('img[src*="veg.gif"]').length > 0;
         const isHalal = $cell.find('img[src*="hal.gif"], img[src*="Hal.gif"]').length > 0;
         
-        // Try to find a link to the item (for nutrition info)
+        // try to find a link to the item (for nutrition info)
         const itemLink = $cell.find('a').attr('href');
         
         categories[currentCategory].push({
@@ -93,7 +93,7 @@ export async function scrapeMealMenu(locationNum, date, mealType) {
     
   } catch (error) {
     console.error(`Error scraping meal menu: ${error.message}`);
-    // Return empty structure instead of throwing
+    // return empty structure instead of throwing
     return {
       location: locationNum,
       date: date.replace(/%2f/g, '/'),
@@ -107,10 +107,10 @@ export async function scrapeMealMenu(locationNum, date, mealType) {
 }
 
 /**
- * Scrapes all meals for a specific location and date
- * @param {string} locationNum - Location number
- * @param {string} date - Date in format MM%2fDD%2fYYYY
- * @returns {Object} All meals data
+ // Scrapes all meals for a specific location and date
+ // @param {string} locationNum - Location number
+ // @param {string} date - Date in format MM%2fDD%2fYYYY
+ // @returns {Object} All meals data
  */
 export async function scrapeAllMeals(locationNum, date) {
   const results = {
@@ -119,7 +119,7 @@ export async function scrapeAllMeals(locationNum, date) {
     meals: {}
   };
   
-  // Get available meals for this location
+  // get available meals for this location
   const availableMeals = getAvailableMeals(locationNum);
   
   for (const mealType of availableMeals) {
