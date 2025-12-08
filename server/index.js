@@ -7,7 +7,7 @@ import { scrapeNutritionData, scrapeItemDetails, calculateNutritionTotals, scrap
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// CORS configuration - allows requests from frontend
+// allows requests from frontend
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
@@ -18,13 +18,13 @@ const allowedOrigins = [
   'http://www.harvardmacros.com'
 ];
 
-// Allow any Netlify preview/production URLs and custom domain
+// allowing any netlify preview/production URLs and custom domain (for testing and initial production)
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, Postman, etc.)
+    // allow requests with no origin 
     if (!origin) return callback(null, true);
     
-    // Allow localhost, Netlify domains, and harvardmacros.com
+    // allow localhost, Netlify domains, and harvardmacros.com
     if (allowedOrigins.includes(origin) || origin.includes('.netlify.app') || origin.includes('harvardmacros.com')) {
       callback(null, true);
     } else {
@@ -36,22 +36,22 @@ app.use(cors({
 
 app.use(express.json());
 
-// Get available locations
+// get available locations
 app.get('/api/locations', (req, res) => {
   res.json(LOCATIONS);
 });
 
-// Get available dates (today + 6 days)
+// get available dates (today + 6 days)
 app.get('/api/dates', (req, res) => {
   res.json(getAvailableDates());
 });
 
-// Get available meal types
+// get available meal types
 app.get('/api/meals', (req, res) => {
   res.json(MEAL_TYPES);
 });
 
-// Get available meals for a specific location
+// get available meals for a specific location
 app.get('/api/meals/:locationNum', (req, res) => {
   try {
     const { locationNum } = req.params;
@@ -62,12 +62,12 @@ app.get('/api/meals/:locationNum', (req, res) => {
   }
 });
 
-// Get menu for a specific location, date, and meal
+// get menu for a specific location, date, and meal
 app.get('/api/menu', async (req, res) => {
   try {
     const { location, date, meal } = req.query;
     
-    // Default to Annenberg, today, and lunch if not specified
+    // default to berg, today, and lunch if not specified
     const locationNum = location || LOCATIONS.ANNENBERG.locationNum;
     const dateStr = date || getAvailableDates()[0].formatted;
     const mealType = meal || MEAL_TYPES.LUNCH;
@@ -86,7 +86,7 @@ app.get('/api/menu', async (req, res) => {
   }
 });
 
-// Get all meals for a location and date
+// get all meals for a location and date
 app.get('/api/menu/all', async (req, res) => {
   try {
     const { location, date } = req.query;
@@ -98,7 +98,7 @@ app.get('/api/menu/all', async (req, res) => {
     
     const menuData = await scrapeAllMeals(locationNum, dateStr);
     res.json(menuData);
-    
+  // error messaging for meals not populating  
   } catch (error) {
     console.error('Error fetching all meals:', error);
     res.status(500).json({ 
@@ -108,7 +108,7 @@ app.get('/api/menu/all', async (req, res) => {
   }
 });
 
-// Get nutrition data for selected items
+// get nutrition data for selected items
 app.post('/api/nutrition', async (req, res) => {
   try {
     const { location, date, meal, items } = req.body;
@@ -135,7 +135,7 @@ app.post('/api/nutrition', async (req, res) => {
   }
 });
 
-// Get detailed nutrition info for a single item
+// get detailed nutrition info for a single item
 app.get('/api/nutrition/item', async (req, res) => {
   try {
     const { location, date, meal, name } = req.query;
@@ -191,7 +191,7 @@ app.post('/api/nutrition/calculate', (req, res) => {
   }
 });
 
-// Health check endpoint
+// health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
