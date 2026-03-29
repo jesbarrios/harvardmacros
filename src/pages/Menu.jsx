@@ -196,6 +196,7 @@ function NewMenu() {
   const [sidebarClosing, setSidebarClosing] = useState(false)
   const [expandedSidebarMicros, setExpandedSidebarMicros] = useState(false)
   const [expandedSidebarItemMicros, setExpandedSidebarItemMicros] = useState({})
+  const [quantityDrafts, setQuantityDrafts] = useState({})
 
   // filter states
   const [filterVegan, setFilterVegan] = useState(false)
@@ -462,6 +463,29 @@ function NewMenu() {
   const getItemQuantity = (itemName, category) => {
     const found = selectedItems.find((selected) => selected.item.name === itemName && selected.category === category)
     return found ? found.quantity : 0
+  }
+
+  // set an arbitrary quantity (supports decimals)
+  const handleSetQuantity = (item, category, value) => {
+    const parsed = parseFloat(value)
+    if (isNaN(parsed) || parsed <= 0) {
+      // remove item if invalid or zero
+      setSelectedItems(selectedItems.filter(
+        (s) => !(s.item.name === item.name && s.category === category)
+      ))
+      return
+    }
+    const rounded = Math.round(parsed * 100) / 100
+    const existingIndex = selectedItems.findIndex(
+      (s) => s.item.name === item.name && s.category === category
+    )
+    if (existingIndex !== -1) {
+      const newItems = [...selectedItems]
+      newItems[existingIndex].quantity = rounded
+      setSelectedItems(newItems)
+    } else {
+      setSelectedItems([...selectedItems, { item, category, quantity: rounded }])
+    }
   }
 
   // total number of items in cart
@@ -981,7 +1005,18 @@ function NewMenu() {
                                 >
                                   <Minus className="h-4 w-4" />
                                 </button>
-                                <span className="font-semibold text-sm w-8 text-center">{quantity}</span>
+                                <input
+                                  type="number"
+                                  min="0.25"
+                                  step="0.25"
+                                  value={quantityDrafts[itemKey] !== undefined ? quantityDrafts[itemKey] : quantity}
+                                  onChange={(e) => setQuantityDrafts(prev => ({ ...prev, [itemKey]: e.target.value }))}
+                                  onBlur={(e) => {
+                                    handleSetQuantity(item, category, e.target.value)
+                                    setQuantityDrafts(prev => { const n = { ...prev }; delete n[itemKey]; return n })
+                                  }}
+                                  className="font-semibold text-sm w-12 text-center border border-gray-300 rounded focus:outline-none focus:border-primary-700 h-6"
+                                />
                                 <button
                                   onClick={() => handleAddToMeal(item, category)}
                                   className="p-1 bg-primary-700 text-white rounded-md hover:bg-primary-800"
@@ -1416,7 +1451,18 @@ function NewMenu() {
                               >
                                 <Minus className="h-4 w-4" />
                               </button>
-                              <span className="font-semibold text-sm w-8 text-center">{quantity}</span>
+                              <input
+                                type="number"
+                                min="0.25"
+                                step="0.25"
+                                value={quantityDrafts[itemKey] !== undefined ? quantityDrafts[itemKey] : quantity}
+                                onChange={(e) => setQuantityDrafts(prev => ({ ...prev, [itemKey]: e.target.value }))}
+                                onBlur={(e) => {
+                                  handleSetQuantity(item, category, e.target.value)
+                                  setQuantityDrafts(prev => { const n = { ...prev }; delete n[itemKey]; return n })
+                                }}
+                                className="font-semibold text-sm w-12 text-center border border-gray-300 rounded focus:outline-none focus:border-primary-700 h-6"
+                              />
                               <button
                                 onClick={() => handleAddToMeal(item, category)}
                                 className="p-1 bg-primary-700 text-white rounded-md hover:bg-primary-800"
